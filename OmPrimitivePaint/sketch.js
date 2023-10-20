@@ -84,7 +84,7 @@ function drawShapes(){ //Draw all the shapes in shapes array
 function drawAutonomous() { // draws the boundary-like rect moving thing i dont know what to call it
   noStroke();
   val=map(millis()%1000, 0, 1000, 0, 1);
-  if(curr==0)
+  if(curr===0)
     rect(0,0,width*val,autoSize);
   else if(curr==1)
     rect(width-autoSize,0,autoSize,height*val)

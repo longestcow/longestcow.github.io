@@ -1,34 +1,40 @@
-// Project Title
-// Your Name
-// Date
+// Multi-color Grid
+// Om Iyer
+// 28/9/2023
 //
 // Extra for Experts:
-// - describe what you did to take this project "above and beyond"
-
-let size = 10;
+// - there is a slight theme (an ugly one) and the cells do not spill over
+ 
+let _size = 10; //square cell size
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   document.addEventListener("contextmenu", event => event.preventDefault());
   background(220);
   noStroke();
-  drawGrid();
+  drawGrid();//first grid draw
 }
 
 function draw() {
-  if(mouseIsPressed){
-    if(mouseButton===LEFT && size-2>0)size-=2;
-    else size+=2;
-    drawGrid();
-  }
-  if(keyIsPressed) drawGrid();
+  //i have nothing to put here
 }
 
 function drawGrid(){
-  for(let i = 0; i<width; i+=size){
-    for(let j = 0; j<height; j+=size){
-      fill(color(255,random(200),random(256)));
-      rect(i,j,size,size);
+  background(220);
+  for(let i = 0; i<width-_size; i+=_size){ //the width-_size makes it so that no cell spills over
+    for(let j = 0; j<height-_size; j+=_size){
+      fill(color(random(100),random(256),random(256))); //r values being random(100) makes the theme
+      rect(i,j,_size,_size);
     }
   }
+}
+
+function mousePressed(){
+  if(mouseButton===LEFT && _size-2>6)_size-=2;
+  else if(mouseButton===RIGHT) _size+=2;
+  drawGrid();
+}
+
+function keyPressed(){
+  drawGrid(); //draws new grid
 }
