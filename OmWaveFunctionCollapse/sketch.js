@@ -2,79 +2,159 @@
 // Om Iyer
 // 30 Oct 2023
 
+p5.disableFriendlyErrors = true;
 
-const c = 400; //canvas size
-
-const d = 4;
+const c = 2000; //canvas size
+const s = 20; // tile count per row
 let grid;
+let scl = c/s;
 
-let scl = c/d;
 let images = [];
+
+const dirs = [
+  [111,111,111,111], // blank sides
+  [121,121,111,121], // up sides
+  [121,121,121,111], // right sides
+  [111,121,121,121], // down sides
+  [121,111,121,121] // left sides
+];
+
+let start;
 
 function preload(){
   images[0]=loadImage("blank.jpg");
   images[1]=loadImage("dir.jpg");
-  for(let image of images) image.resize(0,scl);
+  images[2]=images[1];
+  images[3]=images[1];
+  images[4]=images[1];
 }
 
 
 function setup() {
-  grid=new Array(d);
+  for(let image of images) image.resize(0,scl);
+  grid=new Array(s);
   //fill grid
-  for(let i = 0; i<d; i++){
-    grid[i]=new Array(d);
-    for(let j = 0; j<d; j++){
-      grid[i][j]=new Tile(images[0], ["111","111","111","111"], i, j, 0);
+  for(let i = 0; i<s; i++){
+    grid[i]=new Array(s);
+    for(let j = 0; j<s; j++){
+      grid[i][j]=new Tile(i*scl, j*scl);
     }
   }
 
-  noFill();
-  strokeWeight(10);
-  imageMode(CENTER);
-  rectMode(CENTER);
+
   createCanvas(c, c);
-
-}
-
-function draw() {
-  for(let i = 0; i<d; i++){
-    for(let j = 0; j<d; j++){
+  for(let i = 0; i<s; i++){
+    for(let j = 0; j<s; j++){
       grid[i][j].draw();
     }
   }
-  noLoop();
+  start=performance.now();
+  loop();
+}
+
+//function draw() {}
+
+function draw(){
+  // getting smallest entropy tiles - got the sorting idea from TheCodingTrain
+  let gridCopy = [];
+  for(let i = 0; i<s; i++)
+    for(let j = 0; j<s; j++)
+      gridCopy=gridCopy.concat(grid[i][j]);
+  //now gridCopy has all tiles in one single row
+  gridCopy=gridCopy.filter((tile)=>{//remove all collapsed tiles
+    return !(tile.collapsed);
+  });
+  gridCopy.sort((a,b)=>{
+    return a.options.length - b.options.length; // if a is smaller than b, it will return a negative value, thus letting the sort know which one comes first
+  });
+  if(gridCopy.length===0){//all of them are collapsed
+    noLoop(); 
+    print("finished - "+(performance.now()-start)/1000+"s");
+    return;
+  }
+  
+  let leastEntropy = gridCopy[0].options.length;
+
+  let tile=random(gridCopy.filter((tile)=>{
+    return tile.options.length === leastEntropy;
+  }));
+  
+  tile.collapse();
+
 }
 
 
 class Tile{
 
-  constructor(img, sockets, x, y, rot){
-    this.img=img;
-    this.sockets=sockets;//[["121"],["121"],["111"],["121"]]
+  constructor(x, y){
+    this.sockets;//[["121"],["121"],["111"],["121"]]
     this.x = x;
     this.y = y;
     this.collapsed=false;
-    this.options = [];
-    this.rot=rot;
+    this.options = [0,1,2,3,4];
+    this.rot;
   }
 
-  rotateTile(x,y){
-    //return new tile object with rotated image and sockets
-    let nSocket = this.sockets.slice();
-    let temp = nSocket[0];
-    nSocket[0]=nSocket[3];
-    nSocket[3]=temp;
-
-    return new Tile(this.img, nSocket, x, y, (this.rot+1)%4);
-  }
 
   draw(){
-    //rotation
-    push();
-    translate(this.x,this.y);
-    rotate((HALF_PI)*this.rot);
-    image(this.img, 0, 0, 300,300);
-    rect(0,0,this.img.width, this.img.height);
-    pop();
+    if(this.collapsed){
+      push();
+      translate(this.x+scl/2,this.y+scl/2);
+      rotate((HALF_PI)*this.rot);
+      image(images[this.options[0]], -scl/2, -scl/2);
+      pop();
+    }
+    else
+      image(images[0], this.x, this.y); 
   }
+
+  collapse(){//update neighbours
+    let pick = random(this.options);
+    if(pick===undefined)restart();
+    this.options=[pick];
+    this.sockets=dirs[pick];
+    this.collapsed = true;
+    this.rot=(pick!==0)?pick-1:0;
+
+    //update up's down, filter out any downs that are not equal to this guy's up
+    let x=this.x/scl,y=this.y/scl,x1,y1;
+    if(y !== 0){
+      y1=this.y/scl-1;
+      grid[x][y1].options = grid[x][y1].options.filter((n)=>{
+        return(dirs[n][2] === dirs[pick][0]); //filter out the ones whose down are not equal to this guy's up
+      });
+    }
+
+    //update right's left
+    if(x !== s-1){
+      x1=this.x/scl+1;
+      grid[x1][y].options = grid[x1][y].options.filter((n)=>{
+        return(dirs[n][3] === dirs[pick][1]); //filter out the ones whose left are not equal to this guy's right
+      });
+    }
+
+    if(y !== s-1){ //update down's up
+      y1=this.y/scl+1;
+      grid[x][y1].options = grid[x][y1].options.filter((n)=>{
+        return(dirs[n][0] === dirs[pick][2]); //filter out the ones whose up are not equal to this guy's down
+      });
+    }
+
+    if(x !== 0){//update left's right
+      x1=this.x/scl-1;
+      grid[x1][y].options= grid[x1][y].options.filter((n)=>{
+        return(dirs[n][1] === dirs[pick][3]); //filter out the ones whose left are not equal to this guy's right
+      });
+    }
+
+    this.draw();
+
+  }
+
+}
+
+function restart(){
+  noLoop();
+  print("couldnt reach end");
+  setup();
 }
