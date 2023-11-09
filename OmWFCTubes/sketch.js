@@ -4,7 +4,7 @@
 
 
 const c = 2000; //canvas size
-const s = 40; // tile count per row
+const s = 20; // tile count per row
 let grid;
 let scl = c/s;
 
